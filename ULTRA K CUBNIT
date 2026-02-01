@@ -1,0 +1,141 @@
+--====================================
+-- ULTRA K - VERSÃO ORIGINAL INTEGRAL
+-- (SEM INTERFACE E SEM SONS)
+--====================================
+
+local workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local Debris = game:GetService("Debris")
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+
+-- Identificador para o sistema de Toggle (Liga/Desliga)
+local EFFECT_TAG = "ULTRA_K_ORIGINAL"
+local existing = Lighting:FindFirstChild(EFFECT_TAG)
+
+if existing then
+    existing:Destroy()
+    if workspace:FindFirstChild("FakeRain") then workspace.FakeRain:Destroy() end
+    if workspace:FindFirstChild("ShootingStars") then workspace.ShootingStars:Destroy() end
+    print("ULTRA K: DESATIVADO")
+    return
+end
+
+-- Pasta de Controle
+local Control = Instance.new("Folder", Lighting)
+Control.Name = EFFECT_TAG
+
+--====================================
+-- LÓGICA DE MATERIAIS (ORIGINAL)
+--====================================
+local model = workspace:FindFirstChild("Model")
+if model then
+    local function setMat(obj)
+        for _,c in pairs(obj:GetChildren()) do
+            if c:IsA("BasePart") then c.Material = Enum.Material.Basalt
+            elseif c:IsA("Model") or c:IsA("Folder") then setMat(c) end
+        end
+    end
+    if model:FindFirstChild("001_SnowStreet") then setMat(model["001_SnowStreet"]) end
+    if model:FindFirstChild("Street") then
+        for _,o in pairs(model.Street:GetDescendants()) do
+            if o:IsA("BasePart") then o.Material = Enum.Material.Basalt end
+        end
+    end
+    for _,o in pairs(model:GetChildren()) do
+        if o:IsA("BasePart") and (o.Name=="Sidewalk" or o.Name=="Wedge") and o.Material==Enum.Material.SmoothPlastic then
+            o.Material = Enum.Material.Cobblestone
+        end
+    end
+end
+
+--====================================
+-- ILUMINAÇÃO E SKYBOX (ORIGINAL)
+--====================================
+Lighting.Brightness = 2
+Lighting.GlobalShadows = true
+Lighting.OutdoorAmbient = Color3.fromRGB(70, 70, 70)
+Lighting.FogColor = Color3.fromRGB(120, 130, 140)
+Lighting.FogEnd = 600
+
+local sky = Instance.new("Sky", Control)
+sky.SkyboxBk = "rbxassetid://159454299"
+sky.SkyboxDn = "rbxassetid://159454296"
+sky.SkyboxFt = "rbxassetid://159454293"
+sky.SkyboxLf = "rbxassetid://159454286"
+sky.SkyboxRt = "rbxassetid://159454300"
+sky.SkyboxUp = "rbxassetid://159454304"
+
+local color = Instance.new("ColorCorrectionEffect", Control)
+color.Contrast = 0.15
+color.Saturation = 0.05
+color.TintColor = Color3.fromRGB(255, 240, 220)
+
+local bloom = Instance.new("BloomEffect", Control)
+bloom.Intensity = 0.8
+bloom.Size = 56
+
+local sunRays = Instance.new("SunRaysEffect", Control)
+sunRays.Intensity = 0.05
+
+--====================================
+-- CHUVA E ESTRELAS (ORIGINAL)
+--====================================
+local active = true
+local stars = {}
+local shootingStarsFolder = Instance.new("Folder", workspace)
+shootingStarsFolder.Name = "ShootingStars"
+
+local function createStar()
+    if not active then return end
+    local star = Instance.new("Part", Control)
+    local size = math.random(1,3)*0.5
+    star.Size = Vector3.new(size,size,size)
+    star.Position = Vector3.new(math.random(-1000,1000),math.random(300,700),math.random(-1000,1000))
+    star.Anchored, star.CanCollide = true, false
+    star.Material = Enum.Material.Neon
+    star.Name = "Star"
+    table.insert(stars, star)
+end
+
+task.spawn(function()
+    while active and Lighting:FindFirstChild(EFFECT_TAG) do
+        local hour = Lighting.ClockTime
+        if (hour >= 18 or hour < 6) then
+            if #stars < 100 then createStar() end
+        else
+            for _,s in ipairs(stars) do s:Destroy() end
+            stars = {}
+        end
+        wait(2)
+    end
+end)
+
+-- Sistema de Chuva (Sem som)
+local rainFolder = Instance.new("Folder", workspace)
+rainFolder.Name = "FakeRain"
+
+task.spawn(function()
+    while active and Lighting:FindFirstChild(EFFECT_TAG) do
+        for i = 1, 50 do
+            local drop = Instance.new("Part", rainFolder)
+            drop.Size = Vector3.new(0.1, 2, 0.1)
+            drop.Anchored, drop.CanCollide = true, false
+            drop.Material, drop.Transparency = Enum.Material.Glass, 0.5
+            drop.Position = Vector3.new(math.random(-150,150), 100, math.random(-150,150))
+            TweenService:Create(drop, TweenInfo.new(1), {Position = drop.Position - Vector3.new(0, 60, 0)}):Play()
+            Debris:AddItem(drop, 1.2)
+        end
+        wait(1.5)
+    end
+end)
+
+-- Reflexos originais nos materiais SmoothPlastic
+for _, part in pairs(workspace:GetDescendants()) do
+    if part:IsA("BasePart") and part.Material == Enum.Material.SmoothPlastic then
+        part.Reflectance = 0.25
+    end
+end
+
+print("ULTRA K ORIGINAL: ATIVADO (LIMPO)")
